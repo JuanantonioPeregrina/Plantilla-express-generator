@@ -19,7 +19,9 @@
     <input id="private-input" placeholder="Escribe un mensaje privado..." />
     <button>Enviar privado</button>
   </form>
-  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/chat.js"></script>
+
   <script>
     // Conectar con el servidor Socket.IO
     const socket = io();
@@ -44,7 +46,7 @@
     });
 
     // Manejar envío de mensajes privados
-document.getElementById('private-form').addEventListener('submit', (e) => {
+  document.getElementById('private-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const recipient = document.getElementById('recipient').value;
   const privateInput = document.getElementById('private-input').value;
@@ -56,7 +58,7 @@ document.getElementById('private-form').addEventListener('submit', (e) => {
 });
 
 // Mostrar mensajes privados
-socket.on('private message', ({ sender, text }) => {
+  socket.on('private message', ({ sender, text }) => {
   const item = document.createElement('li');
   item.textContent = `[Privado] ${sender}: ${text}`;
   document.getElementById('messages').appendChild(item);
