@@ -1,68 +1,77 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
- */
+const app = require('../app');
+const debug = require('debug')('myapp:server');
+const http = require('http');
+const { Server } = require('socket.io');
+const sharedSession = require('express-socket.io-session');
 
-var app = require('../app');
-var debug = require('debug')('myapp:server');
-var http = require('http');
-
-/**
- * Get port from environment and store in Express.
- */
-
-var port = normalizePort(process.env.PORT || '3000');
+// Configuración del puerto
+const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
-/**
- * Create HTTP server.
- */
+// Crear servidor HTTP
+const server = http.createServer(app);
 
-var server = http.createServer(app);
+// Configurar Socket.IO
+const io = new Server(server);
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+// Integrar sesiones con Socket.IO
+const sessionMiddleware = app.get('sessionMiddleware');
+io.use(sharedSession(sessionMiddleware, { autoSave: true }));
 
+// Vincular instancia de Socket.IO con la aplicación
+app.set('io', io);
+
+// Manejar eventos de Socket.IO
+io.on('connection', (socket) => {
+  console.log('Un cliente se conectó');
+
+  // Verificar si el usuario tiene sesión activa
+  const session = socket.handshake.session;
+  if (!session || !session.username) {
+    console.log('Usuario no autenticado. Desconectando...');
+    socket.disconnect();
+    return;
+  }
+
+  console.log(`Usuario conectado: ${session.username}`);
+
+  // Enviar historial de mensajes al cliente conectado
+  socket.emit('chat history', app.locals.messages);
+
+  // Manejar evento de mensaje
+  socket.on('chat message', (msg) => {
+    const username = session.username || 'Invitado';
+    const message = { username, text: msg };
+
+    app.locals.messages.push(message); // Agregar mensaje al historial
+    io.emit('chat message', message); // Reenviar mensaje a todos los clientes
+  });
+
+  // Manejar desconexión
+  socket.on('disconnect', () => {
+    console.log(`Usuario desconectado: ${session.username}`);
+  });
+});
+
+// Iniciar servidor
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
-/**
- * Normalize a port into a number, string, or false.
- */
-
+// Normalizar puerto
 function normalizePort(val) {
-  var port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // port number
-    return port;
-  }
-
+  const port = parseInt(val, 10);
+  if (isNaN(port)) return val;
+  if (port >= 0) return port;
   return false;
 }
 
-/**
- * Event listener for HTTP server "error" event.
- */
-
+// Manejar errores
 function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
-
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
-
-  // handle specific listen errors with friendly messages
+  if (error.syscall !== 'listen') throw error;
+  const bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
   switch (error.code) {
     case 'EACCES':
       console.error(bind + ' requires elevated privileges');
@@ -77,14 +86,9 @@ function onError(error) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
-
+// Evento de "escucha"
 function onListening() {
-  var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  const addr = server.address();
+  const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
+  console.log(`Servidor escuchando en ${bind}`);
 }

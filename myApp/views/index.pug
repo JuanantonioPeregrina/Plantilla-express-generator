@@ -1,11 +1,16 @@
-extends layout
 
-block content
-  h1= title
-  ul
-    each item in items
-      li
-        img(src=item.image, alt=item.text)
-        p= item.text
-  a(href='/login') 
-    button Login
+
+doctype html
+html
+  head
+    title= title
+  body
+    h1= title
+    form(action="/login" method="POST")
+      label(for="username") Usuario:
+      input(type="text" name="username" required)
+      br
+      label(for="password") Contraseña:
+      input(type="password" name="password" required)
+      br
+      button(type="submit") Iniciar sesión

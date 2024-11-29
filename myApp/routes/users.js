@@ -1,3 +1,6 @@
+/*
+npm install socket.io express-session cookie-parse*/
+
 var express = require('express');
 var router = express.Router();
 

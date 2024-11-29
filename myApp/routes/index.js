@@ -1,19 +1,36 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  const items = [
-    { image: '/images/item1.jpg', text: 'Item 1' },
-    { image: '/images/item2.jpg', text: 'Item 2' },
-    { image: '/images/item3.jpeg', text: 'Item 3' }
-  ];
-  res.render('index', { title: 'Home', items });
+// Simular usuarios
+const users = { admin: 'password1', user2: 'password2' };
+
+router.get('/', (req, res) => {
+  if (req.session.username) {
+    res.redirect('/chat.html');
+  } else {
+    res.render('index', { title: 'Login' });
+  }
 });
 
-router.get('/login', function(req, res, next) {
-  res.render('login', { title: 'Login' });
+router.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (users[username] && users[username] === password) {
+    req.session.username = username;
+    res.redirect('/chat.html');
+  } else {
+    res.status(401).send('Usuario o contraseña incorrectos');
+  }
 });
 
+router.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error al destruir la sesión:', err);
+      return res.status(500).send('No se pudo cerrar la sesión.');
+    }
+    res.clearCookie('connect.sid'); // Limpia la cookie de sesión
+    res.redirect('/'); // Redirige al login
+  });
+});
 
 module.exports = router;
