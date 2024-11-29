@@ -25,33 +25,55 @@ app.set('io', io);
 
 // Manejar eventos de Socket.IO
 io.on('connection', (socket) => {
-  console.log('Un cliente se conectó');
-
-  // Verificar si el usuario tiene sesión activa
   const session = socket.handshake.session;
+
   if (!session || !session.username) {
     console.log('Usuario no autenticado. Desconectando...');
     socket.disconnect();
     return;
   }
 
-  console.log(`Usuario conectado: ${session.username}`);
+  const username = session.username;
+  console.log(`Usuario conectado: ${username}`);
 
-  // Enviar historial de mensajes al cliente conectado
+  // Asociar el socket al nombre de usuario
+  socket.username = username;
+
+  // Enviar historial de mensajes
   socket.emit('chat history', app.locals.messages);
 
-  // Manejar evento de mensaje
+  // Manejar mensajes públicos
   socket.on('chat message', (msg) => {
-    const username = session.username || 'Invitado';
     const message = { username, text: msg };
-
-    app.locals.messages.push(message); // Agregar mensaje al historial
-    io.emit('chat message', message); // Reenviar mensaje a todos los clientes
+    app.locals.messages.push(message);
+    io.emit('chat message', message); // Reenviar mensaje público
   });
 
-  // Manejar desconexión
+  // Manejar mensajes privados
+  socket.on('private message', ({ recipient, text }) => {
+    const targetSocket = Array.from(io.sockets.sockets.values()).find(
+      (s) => s.username === recipient
+    );
+
+    if (targetSocket) {
+      targetSocket.emit('private message', {
+        sender: username,
+        text,
+      });
+      socket.emit('private message', {
+        sender: `Tú (a ${recipient})`,
+        text,
+      });
+    } else {
+      socket.emit('private message', {
+        sender: 'Sistema',
+        text: `Usuario ${recipient} no está disponible.`,
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
-    console.log(`Usuario desconectado: ${session.username}`);
+    console.log(`Usuario desconectado: ${username}`);
   });
 });
 

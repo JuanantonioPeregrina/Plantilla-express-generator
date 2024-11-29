@@ -14,7 +14,12 @@
     <button>Enviar</button>
   </form>
   <a href="/logout">Cerrar sesión</a>
-
+  <form id="private-form">
+    <input id="recipient" placeholder="Usuario destinatario..." />
+    <input id="private-input" placeholder="Escribe un mensaje privado..." />
+    <button>Enviar privado</button>
+  </form>
+  
   <script>
     // Conectar con el servidor Socket.IO
     const socket = io();
@@ -37,6 +42,25 @@
       item.textContent = `[${msg.username}] ${msg.text}`;
       document.getElementById('messages').appendChild(item);
     });
+
+    // Manejar envío de mensajes privados
+document.getElementById('private-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const recipient = document.getElementById('recipient').value;
+  const privateInput = document.getElementById('private-input').value;
+
+  if (recipient && privateInput) {
+    socket.emit('private message', { recipient, text: privateInput });
+    privateInput.value = ''; // Limpiar campo
+  }
+});
+
+// Mostrar mensajes privados
+socket.on('private message', ({ sender, text }) => {
+  const item = document.createElement('li');
+  item.textContent = `[Privado] ${sender}: ${text}`;
+  document.getElementById('messages').appendChild(item);
+});
   </script>
 </body>
 </html>
